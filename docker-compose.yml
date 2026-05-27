@@ -1,0 +1,49 @@
+version: '3.8'
+
+services:
+  mongodb:
+    image: mongo:6.0
+    container_name: syncwrite-mongodb
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo-data:/data/db
+    networks:
+      - syncwrite-network
+
+  redis:
+    image: redis:7.2-alpine
+    container_name: syncwrite-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    networks:
+      - syncwrite-network
+
+  backend:
+    build:
+      context: ./server
+      dockerfile: Dockerfile
+    container_name: syncwrite-backend
+    restart: unless-stopped
+    ports:
+      - "3005:3005"
+    environment:
+      - PORT=3005
+      - MONGO_URI=mongodb://mongodb:27017/syncwrite
+      - JWT_SECRET_KEY=${JWT_SECRET_KEY}
+      - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
+      - NODE_ENV=production
+    depends_on:
+      - mongodb
+      - redis
+    networks:
+      - syncwrite-network
+
+volumes:
+  mongo-data:
+
+networks:
+  syncwrite-network:
+    driver: bridge
