@@ -5,35 +5,16 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:routemaster/routemaster.dart';
 
-class LoginScreen extends ConsumerStatefulWidget {
+class LoginScreen extends ConsumerWidget {
   const LoginScreen({Key? key}) : super(key: key);
 
-  @override
-  ConsumerState<LoginScreen> createState() => _LoginScreenState();
-}
-
-class _LoginScreenState extends ConsumerState<LoginScreen> {
-  bool _isLoading = false;
-
-  void signInWithGoogle(BuildContext context) async {
-    if (_isLoading) return;
-    setState(() {
-      _isLoading = true;
-    });
-
+  void signInWithGoogle(WidgetRef ref, BuildContext context) async {
     final sMessenger = ScaffoldMessenger.of(context);
     final navigator = Routemaster.of(context);
     final authRepository = ref.read(authRepositoryProvider);
     final userNotifier = ref.read(userProvider.notifier);
 
     final errorModel = await authRepository.signInWithGoogle();
-    
-    if (mounted) {
-      setState(() {
-        _isLoading = false;
-      });
-    }
-
     if (errorModel.error == null) {
       userNotifier.update((state) => errorModel.data);
       navigator.replace('/');
@@ -47,24 +28,18 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return Scaffold(
       body: Center(
         child: ElevatedButton.icon(
-          onPressed: _isLoading ? null : () => signInWithGoogle(context),
-          icon: _isLoading 
-              ? const SizedBox(
-                  width: 20,
-                  height: 20,
-                  child: CircularProgressIndicator(strokeWidth: 2),
-                )
-              : Image.asset(
-                  'assets/images/g-logo-2.png',
-                  height: 20,
-                ),
-          label: Text(
-            _isLoading ? 'Signing in...' : 'Sign in with Google',
-            style: const TextStyle(
+          onPressed: () => signInWithGoogle(ref, context),
+          icon: Image.asset(
+            'assets/images/g-logo-2.png',
+            height: 20,
+          ),
+          label: const Text(
+            'Sign in with Google',
+            style: TextStyle(
               color: kBlackColor,
             ),
           ),
