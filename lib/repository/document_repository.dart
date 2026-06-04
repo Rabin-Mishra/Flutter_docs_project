@@ -148,6 +148,41 @@ class DocumentRepository {
     return error;
   }
 
+  Future<ErrorModel> exportToDocx(String token, String id) async {
+    ErrorModel error = ErrorModel(
+      error: 'Some unexpected error occurred.',
+      data: null,
+    );
+    try {
+      var res = await _client.get(
+        Uri.parse('$host/doc/$id/export/docx'),
+        headers: {
+          'x-auth-token': token,
+        },
+      );
+      switch (res.statusCode) {
+        case 200:
+          error = ErrorModel(
+            error: null,
+            data: res.bodyBytes,
+          );
+          break;
+        default:
+          error = ErrorModel(
+            error: 'Failed to export document. Status: ${res.statusCode}',
+            data: null,
+          );
+          break;
+      }
+    } catch (e) {
+      error = ErrorModel(
+        error: e.toString(),
+        data: null,
+      );
+    }
+    return error;
+  }
+
   Future<ErrorModel> shareDocument({
     required String token,
     required String id,

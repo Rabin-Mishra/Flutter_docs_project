@@ -10,7 +10,9 @@ import 'package:http/http.dart';
 
 final authRepositoryProvider = Provider(
   (ref) => AuthRepository(
-    googleSignIn: GoogleSignIn(),
+    googleSignIn: GoogleSignIn(
+      clientId: '741688073587-san3a81s096479lj3vnaps2m0ptlftkr.apps.googleusercontent.com',
+    ),
     client: Client(),
     localStorageRepository: LocalStorageRepository(),
   ),

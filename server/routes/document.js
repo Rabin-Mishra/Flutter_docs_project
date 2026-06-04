@@ -2,6 +2,7 @@ const express = require("express");
 const Document = require("../models/document");
 const DocumentHistory = require("../models/DocumentHistory");
 const User = require("../models/user");
+const HTMLtoDOCX = require("html-to-docx");
 const documentRouter = express.Router();
 const auth = require("../middlewares/auth");
 
@@ -189,6 +190,106 @@ documentRouter.post("/doc/:id/restore/:version", auth, async (req, res) => {
     }
 
     res.json(updatedDoc);
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// ─── WORD EXPORT (DOCX) ──────────────────────────────────────────────────────
+documentRouter.get("/doc/:id/export/docx", auth, async (req, res) => {
+  try {
+    const document = await Document.findById(req.params.id);
+    if (!document) return res.status(404).json({ error: "Document not found." });
+
+    const user = await User.findById(req.user);
+    if (!user) return res.status(401).json({ error: "User not found." });
+
+    const isOwner = document.uid === req.user;
+    const share = document.sharedWith.find(s => s.email === user.email);
+
+    if (!isOwner && !share) {
+      return res.status(403).json({ error: "You do not have permission to access this document." });
+    }
+
+    // High-fidelity conversion from Quill Delta JSON to basic semantic HTML
+    const ops = document.content || [];
+    let html = '';
+    let inList = false;
+    let listType = '';
+
+    for (let i = 0; i < ops.length; i++) {
+      const op = ops[i];
+      if (!op.insert) continue;
+
+      const attributes = op.attributes || {};
+      let text = op.insert;
+
+      if (typeof text === 'string') {
+        const segments = text.split('\n');
+
+        for (let j = 0; j < segments.length; j++) {
+          let segment = segments[j];
+
+          if (segment.length > 0) {
+            // Escape standard HTML characters safely
+            segment = segment
+              .replace(/&/g, '&amp;')
+              .replace(/</g, '&lt;')
+              .replace(/>/g, '&gt;');
+            
+            // Inline formatting tags
+            if (attributes.bold) segment = `<strong>${segment}</strong>`;
+            if (attributes.italic) segment = `<em>${segment}</em>`;
+            if (attributes.underline) segment = `<u>${segment}</u>`;
+          }
+
+          if (j < segments.length - 1) {
+            // End of line boundary: compile block tags
+            if (attributes.header) {
+              html += `<h${attributes.header}>${segment}</h${attributes.header}>`;
+            } else if (attributes.list) {
+              const listTag = attributes.list === 'ordered' ? 'ol' : 'ul';
+              if (!inList) {
+                html += `<${listTag}>`;
+                inList = true;
+                listType = listTag;
+              }
+              html += `<li>${segment}</li>`;
+            } else {
+              if (inList) {
+                html += `</${listType}>`;
+                inList = false;
+              }
+              html += `<p>${segment}</p>`;
+            }
+          } else {
+            // Concat inline styled segment runs
+            html += segment;
+          }
+        }
+      }
+    }
+
+    if (inList) {
+      html += `</${listType}>`;
+    }
+
+    const docxHtml = `<!DOCTYPE html><html><head><meta charset="utf-8"></head><body>${html}</body></html>`;
+
+    // Compile DOCX buffer using html-to-docx
+    const fileBuffer = await HTMLtoDOCX(docxHtml, null, {
+      table: { row: { cantSplit: true } },
+      footer: true,
+      header: true,
+      pageNumber: true,
+    });
+
+    const safeTitle = (document.title || "Untitled").replace(/[^a-zA-Z0-9]/g, "_");
+
+    // Set download file headers
+    res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.wordprocessingml.document");
+    res.setHeader("Content-Disposition", `attachment; filename=${safeTitle}.docx`);
+    res.send(fileBuffer);
   } catch (e) {
     res.status(500).json({ error: e.message });
   }

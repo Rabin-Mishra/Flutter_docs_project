@@ -32,4 +32,8 @@ authRouter.get("/", auth, async (req, res) => {
   res.json({ user, token: req.token });
 });
 
+authRouter.get("/status", (req, res) => {
+  res.json({ status: "online", message: "SyncWrite Backend is running successfully!" });
+});
+
 module.exports = authRouter;
