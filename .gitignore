@@ -46,3 +46,5 @@ app.*.map.json
 # Local secrets
 .env
 
+prompt.md
+IMPLEMENTATION_PLAN.MD
