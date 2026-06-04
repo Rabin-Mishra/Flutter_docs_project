@@ -47,3 +47,6 @@ app.*.map.json
 .env
 syncwrite-backend/
 
+prompt.md
+IMPLEMENTATION_PLAN.md
+DEPLOYMENT_GUIDE.md
