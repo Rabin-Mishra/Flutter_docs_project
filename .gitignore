@@ -47,4 +47,5 @@ app.*.map.json
 .env
 
 prompt.md
-IMPLEMENTATION_PLAN.MD
+IMPLEMENTATION_PLAN.md
+DEPLOYMENT_GUIDE.md
