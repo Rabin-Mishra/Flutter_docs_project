@@ -1,0 +1,16 @@
+---
+- name: Deploy and Configure SyncWrite Production Environment
+  hosts: webservers
+  become: yes
+
+  vars:
+    app_dir: /opt/syncwrite
+    repo_url: https://github.com/Rabin-Mishra/Flutter_docs_project.git
+    domain_name: "{{ lookup('env', 'DOMAIN_NAME') | default('syncwrite.example.com', true) }}"
+    letsencrypt_email: "{{ lookup('env', 'LETSENCRYPT_EMAIL') | default('admin@example.com', true) }}"
+
+  roles:
+    - common
+    - docker
+    - app
+    - ssl

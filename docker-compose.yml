@@ -1,49 +1,76 @@
-version: '3.8'
-
 services:
   mongodb:
     image: mongo:6.0
     container_name: syncwrite-mongodb
-    restart: unless-stopped
+    restart: always
     ports:
       - "27017:27017"
     volumes:
       - mongo-data:/data/db
     networks:
-      - syncwrite-network
+      - syncwrite-net
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   redis:
     image: redis:7.2-alpine
     container_name: syncwrite-redis
-    restart: unless-stopped
+    restart: always
     ports:
       - "6379:6379"
+    volumes:
+      - redis-data:/data
     networks:
-      - syncwrite-network
+      - syncwrite-net
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   backend:
     build:
       context: ./server
       dockerfile: Dockerfile
     container_name: syncwrite-backend
-    restart: unless-stopped
+    restart: always
     ports:
       - "3005:3005"
     environment:
       - PORT=3005
-      - MONGO_URI=mongodb://mongodb:27017/syncwrite
-      - JWT_SECRET_KEY=${JWT_SECRET_KEY}
-      - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
+      - MONGO_URI=${MONGO_URI:-mongodb://mongodb:27017/syncwrite}
+      - REDIS_URI=${REDIS_URI:-redis://redis:6379}
+      - JWT_SECRET_KEY=${JWT_SECRET_KEY:-syncwrite_secret_production_key_2026}
+      - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID:-741688073587-san3a81s096479lj3vnaps2m0ptlftkr.apps.googleusercontent.com}
       - NODE_ENV=production
     depends_on:
-      - mongodb
-      - redis
+      mongodb:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
     networks:
-      - syncwrite-network
+      - syncwrite-net
+
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile.frontend
+    container_name: syncwrite-frontend
+    restart: always
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+    networks:
+      - syncwrite-net
 
 volumes:
   mongo-data:
+  redis-data:
 
 networks:
-  syncwrite-network:
+  syncwrite-net:
     driver: bridge

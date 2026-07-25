@@ -1,0 +1,43 @@
+---
+- name: Update apt repository cache
+  apt:
+    update_cache: yes
+    cache_valid_time: 3600
+
+- name: Install system utility dependencies
+  apt:
+    name:
+      - apt-transport-https
+      - ca-certificates
+      - curl
+      - gnupg
+      - lsb-release
+      - git
+      - ufw
+      - fail2ban
+      - htop
+      - python3-pip
+    state: present
+
+- name: Configure UFW firewall defaults
+  ufw:
+    direction: "{{ item.direction }}"
+    policy: "{{ item.policy }}"
+  loop:
+    - { direction: 'incoming', policy: 'deny' }
+    - { direction: 'outgoing', policy: 'allow' }
+
+- name: Allow SSH, HTTP, HTTPS, and App Ports through Firewall
+  ufw:
+    rule: allow
+    port: "{{ item }}"
+    proto: tcp
+  loop:
+    - '22'
+    - '80'
+    - '443'
+    - '3005'
+
+- name: Enable UFW firewall
+  ufw:
+    state: enabled

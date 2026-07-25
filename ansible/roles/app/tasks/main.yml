@@ -1,0 +1,35 @@
+---
+- name: Ensure target application directory exists
+  file:
+    path: "{{ app_dir }}"
+    state: directory
+    owner: ubuntu
+    group: docker
+    mode: '0775'
+
+- name: Sync application repository code
+  git:
+    repo: "{{ repo_url }}"
+    dest: "{{ app_dir }}"
+    version: main
+    force: yes
+  become_user: ubuntu
+
+- name: Create production .env file from template
+  copy:
+    dest: "{{ app_dir }}/.env"
+    content: |
+      PORT=3005
+      NODE_ENV=production
+      MONGO_URI=mongodb://mongodb:27017/syncwrite
+      REDIS_URI=redis://redis:6379
+      JWT_SECRET_KEY=syncwrite_secret_production_key_2026
+      GOOGLE_CLIENT_ID=741688073587-san3a81s096479lj3vnaps2m0ptlftkr.apps.googleusercontent.com
+    owner: ubuntu
+    group: docker
+    mode: '0600'
+
+- name: Build and launch Docker Compose stack
+  command: docker compose up -d --build
+  args:
+    chdir: "{{ app_dir }}"

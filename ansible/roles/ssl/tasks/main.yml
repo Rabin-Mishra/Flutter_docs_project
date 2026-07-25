@@ -1,0 +1,27 @@
+---
+- name: Install Certbot and Nginx plugin
+  apt:
+    name:
+      - certbot
+      - python3-certbot-nginx
+    state: present
+
+- name: Check if SSL certificate already exists
+  stat:
+    path: "/etc/letsencrypt/live/{{ domain_name }}/fullchain.pem"
+  register: ssl_cert
+
+- name: Issue Let's Encrypt SSL Certificate
+  command: >
+    certbot --nginx -d {{ domain_name }}
+    --non-interactive --agree-tos
+    -m {{ letsencrypt_email }}
+    --redirect
+  when: not ssl_cert.stat.exists and domain_name != 'syncwrite.example.com'
+  ignore_errors: yes
+
+- name: Enable automatic daily Certbot renewal timer
+  systemd:
+    name: certbot.timer
+    state: started
+    enabled: yes
